@@ -42,8 +42,33 @@ def get_dates_from_input():
 
 
 #
-# Helpers
+# Data formatting
 #
+
+
+def append_train_data(train_data, data_length, new_date, new_data):
+    # Find the trains which are missing from train data
+    missing_trains = [train for train in new_data if train not in train_data]
+
+    # For those trains which already exist in the data, update information for the new date
+    for train in train_data:
+        train_info = train_data[train]
+        if train == "Date":
+            train_info.append(new_date)
+        elif train in new_data:
+            train_info.append(1)
+        else:
+            train_info.append(0)
+
+    for missing_train in missing_trains:
+        # If the train data doesn't yet exist in the dictionary, create it and populate with empty data
+        new_train_empty_data = []
+        for i in range(data_length - 1):
+            new_train_empty_data.append(0)
+        new_train_empty_data.append(1)
+        train_data[missing_train] = new_train_empty_data
+
+    return train_data
 
 
 def generate_date_range(start_date, end_date):
@@ -138,17 +163,21 @@ def main():
 
     # Data fetching
     print(f"\nFetching train data for time range {start_date} - {end_date}...")
+    train_data = {"Date": []}
+    data_length = 0
     for date in date_list:
+        data_length += 1
         data = query_railway_api(date)
         if data:
             trains = get_train_numbers(data)
             print(f"{date} - trains: {trains}")
+            train_data = append_train_data(train_data, data_length, date, trains)
         else:
             print(f"{date} - ERROR: failed to fetch data for trains")
 
     # Transfer data to Excel
     print("\nTransferring data to Excel...")
-    current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    # current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 # Bruh
