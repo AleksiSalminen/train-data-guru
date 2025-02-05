@@ -1,7 +1,7 @@
 import requests
 import json
-from datetime import datetime
-
+from datetime import datetime, timedelta
+import pandas as pd
 
 #
 # File handlers
@@ -19,8 +19,40 @@ def read_json_data(filename):
 
 
 #
+# User input
+#
+
+
+def get_date_input(prompt):
+    while True:
+        try:
+            date_str = input(prompt + " (YYYY-MM-DD): ")
+            return datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            print("Invalid date format. Please use YYYY-MM-DD")
+
+
+def get_dates_from_input():
+    start_date = get_date_input("Enter start date")
+    end_date = get_date_input("Enter end date")
+    while end_date < start_date:
+        print("End date must be after start date!")
+        end_date = get_date_input("Enter end date")
+    return start_date, end_date
+
+
+#
 # Helpers
 #
+
+
+def generate_date_range(start_date, end_date):
+    current_date = start_date
+    dates = []
+    while current_date <= end_date:
+        dates.append(current_date.strftime("%Y-%m-%d"))
+        current_date += timedelta(days=1)
+    return dates
 
 
 def get_train_numbers(rw_data):
@@ -35,15 +67,6 @@ def get_train_numbers(rw_data):
 
 
 def query_railway_api(departure_date="2024-01-01"):
-    """
-    Query the Finnish railway API for train information.
-
-    Args:
-        departure_date (str): Date in YYYY-MM-DD format
-
-    Returns:
-        dict: API response data
-    """
     url = "https://rata.digitraffic.fi/api/v2/graphql/graphql"
 
     headers = {"Content-Type": "application/json", "Accept-Encoding": "gzip"}
@@ -98,7 +121,6 @@ def query_railway_api(departure_date="2024-01-01"):
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()
-
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
         return None
@@ -110,15 +132,25 @@ def query_railway_api(departure_date="2024-01-01"):
 
 
 def main():
-    departure_date = "2024-01-01"
-    result = query_railway_api(departure_date)
+    # Generate date range from user input
+    start_date, end_date = get_dates_from_input()
+    date_list = generate_date_range(start_date, end_date)
 
-    if result:
-        trains = get_train_numbers(result)
-        current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"data/{departure_date}_-_{current_datetime}.json"
-        write_json_data(filename, result)
+    # Data fetching
+    print(f"\nFetching train data for time range {start_date} - {end_date}...")
+    for date in date_list:
+        data = query_railway_api(date)
+        if data:
+            trains = get_train_numbers(data)
+            print(f"{date} - trains: {trains}")
+        else:
+            print(f"{date} - ERROR: failed to fetch data for trains")
+
+    # Transfer data to Excel
+    print("\nTransferring data to Excel...")
+    current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
+# Bruh
 if __name__ == "__main__":
     main()
