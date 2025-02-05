@@ -2,7 +2,27 @@ import requests
 import json
 
 
-def query_railway_api(departure_date="2020-10-05"):
+#
+# Helpers
+#
+
+
+def write_json_data(filename, data):
+    with open(filename, "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def read_json_data(filename):
+    with open(filename, "r") as f:
+        return json.load(f)
+
+
+#
+# Data fetch from the API
+#
+
+
+def query_railway_api(departure_date="2024-01-01"):
     """
     Query the Finnish railway API for train information.
 
@@ -22,17 +42,38 @@ def query_railway_api(departure_date="2020-10-05"):
             departureDate:"{departure_date}",
             where: {{ 
                 and: [
-                    {{ operator: {{ shortCode: {{ equals: "vr" }} }} }},
-                    {{ commuterLineid: {{ unequals: "Z" }} }}
+                    {{ timeTableRows: 
+                        {{ contains: 
+                            {{ station: 
+                                {{ shortCode: 
+                                    {{ equals: "MSS" }}
+                                }}
+                            }}
+                        }}
+                    }}, 
+                    {{ timeTableRows:
+                        {{ contains:
+                            {{ train:
+                                {{ trainType:
+                                    {{ trainCategory:
+                                        {{ name:
+                                            {{ equals: "Cargo" }}
+                                        }}
+                                    }}
+                                }}
+                            }}
+                        }}
+                    }}
                 ]
             }},
-            orderBy:{{trainNumber:DESCENDING}}
+            orderBy:{{trainNumber:ASCENDING}}
         ) {{
             trainNumber
             departureDate
-            commuterLineid
-            operator {{
-                shortCode
+            trainTrackingMessages {{
+                previousStation {{
+                    name
+                }}
             }}
         }}
     }}
@@ -50,12 +91,18 @@ def query_railway_api(departure_date="2020-10-05"):
         return None
 
 
+#
+# Main handler
+#
+
+
 def main():
-    departure_date = "2020-10-05"
+    departure_date = "2024-01-01"
     result = query_railway_api(departure_date)
 
     if result:
-        print(json.dumps(result, indent=2))
+        filename = f"data/{departure_date}.json"
+        write_json_data(filename, result)
 
 
 if __name__ == "__main__":
