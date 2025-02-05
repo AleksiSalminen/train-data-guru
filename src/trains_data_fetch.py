@@ -1,9 +1,10 @@
 import requests
 import json
+from datetime import datetime
 
 
 #
-# Helpers
+# File handlers
 #
 
 
@@ -15,6 +16,17 @@ def write_json_data(filename, data):
 def read_json_data(filename):
     with open(filename, "r") as f:
         return json.load(f)
+
+
+#
+# Helpers
+#
+
+
+def get_train_numbers(rw_data):
+    trains = rw_data.get("data").get("trainsByDepartureDate")
+    train_numbers = [train.get("trainNumber") for train in trains]
+    return train_numbers
 
 
 #
@@ -63,18 +75,19 @@ def query_railway_api(departure_date="2024-01-01"):
                                 }}
                             }}
                         }}
+                    }}, 
+                    {{ timeTableRows:
+                        {{ contains:
+                            {{ cancelled:
+                                {{ equals: false }}
+                            }}
+                        }}
                     }}
                 ]
             }},
             orderBy:{{trainNumber:ASCENDING}}
         ) {{
             trainNumber
-            departureDate
-            trainTrackingMessages {{
-                previousStation {{
-                    name
-                }}
-            }}
         }}
     }}
     """
@@ -101,7 +114,9 @@ def main():
     result = query_railway_api(departure_date)
 
     if result:
-        filename = f"data/{departure_date}.json"
+        trains = get_train_numbers(result)
+        current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"data/{departure_date}_-_{current_datetime}.json"
         write_json_data(filename, result)
 
 
