@@ -157,6 +157,8 @@ def query_railway_api(departure_date="2024-01-01"):
 
 
 def main():
+    print()
+
     # Generate date range from user input
     start_date, end_date = get_dates_from_input()
     date_list = generate_date_range(start_date, end_date)
@@ -175,9 +177,12 @@ def main():
         else:
             print(f"{date} - ERROR: failed to fetch data for trains")
 
-    # Transfer data to Excel
+    # Create DataFrame and write to Excel
     print("\nTransferring data to Excel...")
-    # current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    df = pd.DataFrame(train_data)
+    file_name = f"data/{start_date}__{end_date}.xlsx"
+    df.to_excel(file_name, index=False)
+    print(f"Data written to file: {file_name}\n")
 
 
 # Bruh
